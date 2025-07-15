@@ -26,10 +26,13 @@ class User extends ActiveRecord implements IdentityInterface
             [['district', 'state', 'rbac'], 'string', 'max' => 30],
             [['gender'], 'string', 'max' => 10],
             [['email'], 'email'],
+            [['email'], 'unique', 'on' => 'user'],
+            [['username'],'unique', 'on' =>'admin']
         ];
     }
 
     public function scenarios()
+    
     {
         $scenarios = parent::scenarios();
         $scenarios['user'] = ['username', 'fullname', 'email', 'phone', 'dob', 'address', 'district', 'pincode', 'state', 'gender', 'password'];
