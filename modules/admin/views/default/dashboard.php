@@ -67,9 +67,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js">
-    
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const pieLabels = <?= json_encode($pieLabels) ?>;
     const pieData = <?= json_encode($pieData) ?>;

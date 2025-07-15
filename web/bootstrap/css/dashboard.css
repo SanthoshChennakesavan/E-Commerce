@@ -1,0 +1,26 @@
+ .help-block {
+                color: #dc3545;
+                font-size: 0.875rem;
+                margin-top: 5px;
+            }
+
+    table.permission-table {
+        border-collapse: collapse;
+        width: 100%;
+        max-width: 900px;
+    }
+    table.permission-table th,
+    table.permission-table td {
+        border: 1px solid #ccc;
+        text-align: center;
+        padding: 15px;
+    }
+    label.permission-label {
+        margin: 0 10px;
+        font-weight: normal;
+    }
+    input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        vertical-align: middle;
+    } 

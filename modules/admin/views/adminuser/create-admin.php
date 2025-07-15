@@ -21,6 +21,13 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="card p-4 mt-3">
         
         <?php $form = ActiveForm::begin(); ?>
+           <!-- <style>
+            .help-block {
+                color: #dc3545;
+                font-size: 0.875rem;
+                margin-top: 5px;
+            }
+        </style> -->
 
         <?= $form->field($model, 'username')->textInput(['maxlength' => true]) ?>
 

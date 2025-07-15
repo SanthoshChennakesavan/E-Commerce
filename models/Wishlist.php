@@ -1,34 +1,17 @@
 <?php
 
 namespace app\models;
-use app\modules\admin\models\Products; 
-use Yii;
 
-/**
- * This is the model class for table "wishlist".
- *
- * @property int $id
- * @property int $user_id
- * @property int $product_id
- *
- * @property Products $product
- * @property User $user
- */
+use Yii;
+use app\modules\admin\models\Products;
+
 class Wishlist extends \yii\db\ActiveRecord
 {
-
-
-    /**
-     * {@inheritdoc}
-     */
     public static function tableName()
     {
         return 'wishlist';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules()
     {
         return [
@@ -39,9 +22,6 @@ class Wishlist extends \yii\db\ActiveRecord
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels()
     {
         return [
@@ -51,24 +31,42 @@ class Wishlist extends \yii\db\ActiveRecord
         ];
     }
 
-    /**
-     * Gets query for [[Product]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
     public function getProduct()
     {
         return $this->hasOne(Products::class, ['id' => 'product_id']);
     }
 
-    /**
-     * Gets query for [[User]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
     public function getUser()
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
+    // Custom methods to move DB logic here
+    public static function getUserWishlist($userId)
+    {
+        return self::find()
+            ->where(['user_id' => $userId])
+            ->with('product')
+            ->all();
+    }
+
+    public static function toggleWishlist($userId, $productId)
+    {
+        $wishlist = self::findOne(['user_id' => $userId, 'product_id' => $productId]);
+
+        if ($wishlist) {
+            $wishlist->delete();
+            return ['success' => true, 'status' => 'removed'];
+        } else {
+            $wishlist = new self();
+            $wishlist->user_id = $userId;
+            $wishlist->product_id = $productId;
+
+            if ($wishlist->save()) {
+                return ['success' => true, 'status' => 'added'];
+            } else {
+                return ['success' => false, 'message' => 'Failed to save to wishlist'];
+            }
+        }
+    }
 }

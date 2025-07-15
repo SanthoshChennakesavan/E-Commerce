@@ -4,78 +4,67 @@ namespace app\modules\admin\controllers;
 
 use Yii;
 use yii\web\Controller;
-use app\modules\admin\models\Superadmin;
+use yii\web\Response;
+use yii\web\BadRequestHttpException;
 use app\models\User;
+use app\components\MailHelper;
+use yii\web\NotFoundHttpException;
 
 class AdminuserController extends Controller
 {
-    public function actionAdminIndex()
+    public function beforeAction($action)
     {
-        if (!Yii::$app->session->has('superadmin')) {
+        if (Yii::$app->user->isGuest) {
             return $this->redirect(['default/index']);
         }
+        return parent::beforeAction($action);
+    }
 
+    public function actionAdminIndex()
+    {
         $this->layout = 'dashboard';
-
-        $query = User::find();
-
-        // $username = Yii::$app->request->get('username');
-        // if (!empty($username)) {
-        //     $query->andFilterWhere(['like', 'username', $username]);
-        // }
-
-        $dataProvider = new \yii\data\ActiveDataProvider([
-            'query' => $query,
-            'pagination' => ['pageSize' => 10],
-        ]);
+        $dataProvider = User::getUserDataProvider(2);
 
         return $this->render('admin-index', [
             'dataProvider' => $dataProvider,
         ]);
     }
 
-        public function actionView($id)
-        {
-            $this->layout = 'dashboard';
+    public function actionView($id)
+    {
+        $this->layout = 'dashboard';
+        $model = User::findOne($id);
 
-            $model = User::findOne($id); 
+        if (!$model) {
+            throw new NotFoundHttpException("Admin not found.");
+        }
 
-            if (!$model) {
-                throw new \yii\web\NotFoundHttpException("Admin not found.");
+        if (Yii::$app->request->isPost) {
+            $rbacArray = Yii::$app->request->post('rbac', []);
+            $model->rbac = json_encode(array_values($rbacArray), JSON_UNESCAPED_UNICODE);
+
+            if ($model->save(false)) {
+                Yii::$app->session->setFlash('success', 'Permissions saved successfully!');
+                return $this->redirect(['admin-index']);
+            } else {
+                Yii::$app->session->setFlash('error', 'Failed to save permissions!');
             }
+        }
 
-            if (Yii::$app->request->isPost) {
-                
-                $rbacArray = Yii::$app->request->post('rbac', []); 
-               
-                $model->rbac = json_encode($rbacArray);
-
-                if ($model->save(false)) {
-                    Yii::$app->session->setFlash('success', 'Permissions saved successfully!');
-                } else {
-                    Yii::$app->session->setFlash('error', 'Failed to save permissions!');
-                }
-
-                return $this->refresh(); 
-            }
-
-            return $this->render('view', [
-                'model' => $model
-        ]);
+        return $this->render('view', ['model' => $model]);
     }
 
     public function actionCreateAdmin()
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
-        $model = new User();
+        $model = new User(['scenario' => 'admin']);
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            Yii::$app->session->setFlash('success', 'Admin created successfully.');
-            return $this->redirect(['admin-index']); 
+        if ($model->load(Yii::$app->request->post())) {
+            $model->user_type = 2;
+            if ($model->save()) {
+                Yii::$app->session->setFlash('success', 'Admin created successfully.');
+                return $this->redirect(['admin-index']);
+            }
         }
 
         return $this->render('create-admin', ['model' => $model]);
@@ -83,16 +72,12 @@ class AdminuserController extends Controller
 
     public function actionUpdate($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
         $model = User::findOne($id);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             Yii::$app->session->setFlash('success', 'Admin updated successfully.');
-            return $this->redirect(['admin-index']); 
+            return $this->redirect(['admin-index']);
         }
 
         return $this->render('create-admin', ['model' => $model]);
@@ -100,20 +85,14 @@ class AdminuserController extends Controller
 
     public function actionDelete($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
+        Yii::$app->response->format = Response::FORMAT_JSON;
         $model = User::findOne($id);
 
-        if ($model !== null) {
-            $model->delete();
-            Yii::$app->session->setFlash('success', 'Admin deleted successfully.');
-        } else {
-            Yii::$app->session->setFlash('error', 'Admin not found.');
+        if ($model !== null && $model->softDelete()) {
+            return ['success' => true, 'message' => 'Admin deleted successfully.'];
         }
 
-        return $this->redirect(['admin-index']);
+        return ['success' => false, 'message' => 'Admin not found or could not be deleted.'];
     }
 
 }

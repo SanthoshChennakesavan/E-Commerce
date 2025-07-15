@@ -1,9 +1,13 @@
 <?php
 use yii\helpers\Html;
 use yii\helpers\Url;
+use app\models\Cart;
 use yii\bootstrap5\BootstrapAsset;
 use yii\bootstrap5\BootstrapPluginAsset;
+use app\components\assets;
+use app\components\assets\AppAsset;
 
+AppAsset::register($this);
 \yii\web\JqueryAsset::register($this);
 BootstrapAsset::register($this);
 BootstrapPluginAsset::register($this);
@@ -17,11 +21,14 @@ $this->beginPage();
 $isGuest = Yii::$app->user->isGuest;
 $username = !$isGuest ? Yii::$app->user->identity->username : null;
 
-// ✅ Cart Count for logged-in users
+// Cart Count for logged-in users
 $cartCount = 0;
 if (!$isGuest) {
-    $cartCount = \app\models\Cart::find()
-        ->where(['user_id' => Yii::$app->user->id])
+    $cartCount = Cart::find()
+        ->alias('c')
+        ->joinWith(['product p'])
+        ->where(['c.user_id' => Yii::$app->user->id])
+        ->andWhere(['p.status' => 1]) 
         ->count();
 }
 ?>
@@ -33,6 +40,7 @@ if (!$isGuest) {
     <?= Html::csrfMetaTags() ?>
     <title><?= Html::encode($this->title) ?></title>
     <?php $this->head(); ?>
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
      <link href="<?= Yii::getAlias('@web') ?>/bootstrap/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
 
 </head>
@@ -64,7 +72,7 @@ if (!$isGuest) {
                     <?= Html::a(
                         'Cart <span class="badge bg-warning text-dark">' . $cartCount . '</span>',
                         ['/cart/cartindex'],
-                        ['class' => 'nav-link text-white', 'encode' => false] // Important: encode => false to allow HTML
+                        ['class' => 'nav-link text-white', 'encode' => false] 
                     ) ?>
                 </li>
 
@@ -75,7 +83,7 @@ if (!$isGuest) {
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <?php if ($isGuest): ?>
-                            <li><span class="dropdown-item text-muted">Are you sure to login/signup?</span></li>
+                            <!-- <li><span class="dropdown-item text-muted">Are you sure to login/signup?</span></li> -->
                             <li><a class="dropdown-item" href="<?= Url::to(['site/login']) ?>">Login</a></li>
                             <li><a class="dropdown-item" href="<?= Url::to(['site/signup']) ?>">Signup</a></li>
                         <?php else: ?>

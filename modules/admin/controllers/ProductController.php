@@ -4,98 +4,68 @@ namespace app\modules\admin\controllers;
 
 use Yii;
 use yii\web\Controller;
+use yii\web\Response;
 use yii\web\UploadedFile;
+use yii\web\BadRequestHttpException;
 use app\modules\admin\models\Products;
-      
+
 class ProductController extends Controller
 {
+    public function beforeAction($action)
+    {
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['default/index']);
+        }
+        return parent::beforeAction($action);
+    }
+
     public function actionProduct()
     {
-        if (!Yii::$app->session->has('superadmin')) {
-                return $this->redirect(['default/index']);
-            }
-
         $this->layout = 'dashboard';
-        $query = Products::find();
-
-        $productname = Yii::$app->request->get('productname');
-        if (!empty($productname)) {
-            $query->andFilterWhere(['like', 'productname', $productname]);
-        }
-
-        $dataProvider = new \yii\data\ActiveDataProvider([
-            'query' => $query,
-            'pagination' => ['pageSize' => 10],
-        ]);
+        $productname = Yii::$app->request->post('productname');
+        $dataProvider = Products::getFilteredProductList($productname);
 
         return $this->render('product', [
             'dataProvider' => $dataProvider,
         ]);
     }
 
-public function actionCreateproduct()
-{
-    if (!Yii::$app->session->has('superadmin')) {
-        return $this->redirect(['default/index']);
-    }
+    public function actionCreateproduct()
+    {
+        $this->layout = 'dashboard';
+        $model = new Products();
 
-    $this->layout = 'dashboard';
-    $model = new Products();
+        if ($model->load(Yii::$app->request->post())) {
+            $model->imageFile = UploadedFile::getInstance($model, 'imageFile');
 
-    if ($model->load(Yii::$app->request->post())) {
-        $model->imageFile = UploadedFile::getInstance($model, 'imageFile');
-
-        if ($model->imageFile && $model->upload()) {
-            if ($model->save(false)) {
+            if ($model->handleUploadAndSave()) {
                 Yii::$app->session->setFlash('success', 'Product created successfully.');
                 return $this->redirect(['product']);
+            } else {
+                Yii::$app->session->setFlash('error', 'Upload failed.');
+                Yii::error($model->errors, 'product.create');
             }
-        } else {
-          
-            Yii::$app->session->setFlash('error', 'Upload failed.');
-            Yii::error($model->errors, 'product.create'); 
         }
-    } else {
-       
-        Yii::error($model->errors, 'product.validation');
+
+        return $this->render('createproduct', ['model' => $model]);
     }
-
-    return $this->render('createproduct', ['model' => $model]);
-}
-
-
 
     public function actionView($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-                return $this->redirect(['default/index']);
-            }
-
         $this->layout = 'dashboard';
         $model = Products::findOne($id);
         return $this->render('viewproduct', ['model' => $model]);
     }
 
-
     public function actionUpdate($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-                return $this->redirect(['default/index']);
-            }
-
         $this->layout = 'dashboard';
         $model = Products::findOne($id);
 
         if ($model->load(Yii::$app->request->post())) {
             $model->imageFile = UploadedFile::getInstance($model, 'imageFile');
 
-            if($model->validate()){
-            if ($model->imageFile && $model->upload()) {
-                $model->save(false);
-            } else {
-                $model->save();
-            }
-        }
+            $model->handleUploadAndSave();
 
             Yii::$app->session->setFlash('success', 'Product updated successfully.');
             return $this->redirect(['product']);
@@ -106,24 +76,19 @@ public function actionCreateproduct()
 
     public function actionDelete($id)
     {
-        $model = \app\modules\admin\models\Products::findOne($id);
+        Yii::$app->response->format = Response::FORMAT_JSON;
 
-        if ($model) {
-            $imagePath = Yii::getAlias('@webroot/uploads/') . $model->productimage;
-            if (file_exists($imagePath)) {
-                @unlink($imagePath);
-            }
-
-            $model->delete();
-            Yii::$app->session->setFlash('success', 'Product deleted successfully.');
+        if (!Yii::$app->request->isPost) {
+            throw new BadRequestHttpException('Invalid request method.');
         }
 
-        return $this->redirect(['product']);
+        $model = Products::findOne($id);
+
+        if ($model && $model->softDelete()) {
+            Yii::$app->session->setFlash('success', 'Product deleted successfully.');
+            return ['success' => true];
+        }
+
+        return ['success' => false];
     }
 }
-
-
-
-
-
-

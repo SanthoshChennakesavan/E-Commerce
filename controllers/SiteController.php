@@ -9,39 +9,42 @@ use yii\data\ActiveDataProvider;
 use app\modules\admin\models\Category;
 use app\modules\admin\models\Products;
 use app\components\MailHelper;
+use yii\web\NotFoundHttpException;
 
 class SiteController extends Controller
-{
+{  
     public function actionIndex()
     {
-        $selectedCategories = Yii::$app->request->get('category', []);
-        if (!is_array($selectedCategories)) {
-            $selectedCategories = [$selectedCategories];
-        }
+        $selectedSeourls = Yii::$app->request->get('category', []);
+        $selectedCategories = (array) $selectedSeourls;
 
-        $searchModel = new Products();
-        $dataProvider = $searchModel->productSearch($selectedCategories);
-
-        $categories = Category::find()->where(['status' => 1])->all();
-
-        $wishlistProductIds = [];
-        if (!Yii::$app->user->isGuest) {
-            $wishlistProductIds = \app\models\Wishlist::find()
-                ->select('product_id')
-                ->where(['user_id' => Yii::$app->user->id])
+        $categoryIds = [];
+        if (!empty($selectedSeourls)) {
+            $categoryIds = Category::find()
+                ->select('id')
+                ->where(['category_seourl' => $selectedSeourls])
                 ->column();
         }
+
+        $productModel = new Products();
+        $dataProvider = $productModel->productSearch($categoryIds);
+
+        $categories = Category::find()->where(['status' => 1])->all();
 
         return $this->render('index', [
             'dataProvider' => $dataProvider,
             'categories' => $categories,
-            'selectedCategories' => $selectedCategories,
-            'wishlistProductIds' => $wishlistProductIds,
+            'selectedCategories' => $selectedSeourls,
+            'wishlistProductIds' => [], 
         ]);
     }
 
     public function actionSignup()
     {
+         if (!Yii::$app->user->isGuest) {
+             return $this->redirect(['site/index']);
+         }
+
         $model = new User();
         $model->scenario = 'user';
 
@@ -55,7 +58,7 @@ class SiteController extends Controller
                 $body = "
                     <p>Hello <strong>{$model->fullname}</strong>,</p>
                     <p>Your OTP for account verification is: <strong>{$model->otp}</strong></p>
-                    <p>This OTP is valid for 5 minutes.</p>
+                    <p>This OTP is valid for 1 minute.</p>
                 ";
 
                 $sent = MailHelper::send(
@@ -82,10 +85,13 @@ class SiteController extends Controller
 
     public function actionVerifyOtp($id)
     {
+         if (!Yii::$app->user->isGuest) {
+            return $this->redirect(['site/index']);
+        }
         $model = User::findOne($id);
 
         if (!$model) {
-            throw new \yii\web\NotFoundHttpException('User not found.');
+            throw new NotFoundHttpException('User not found.');
         }
 
         $otpExpired = time() > $model->otp_expiry;
@@ -117,10 +123,13 @@ class SiteController extends Controller
 
     public function actionResendOtp($id)
     {
+         if (!Yii::$app->user->isGuest) {
+            return $this->redirect(['site/index']);
+        }
         $user = User::findOne($id);
 
         if (!$user) {
-            throw new \yii\web\NotFoundHttpException('User not found.');
+            throw new NotFoundHttpException('User not found.');
         }
 
         if ($user->is_verified) {
@@ -133,7 +142,7 @@ class SiteController extends Controller
             $body = "
                 <p>Hello <strong>{$user->fullname}</strong>,</p>
                 <p>Your new OTP is: <strong>{$user->otp}</strong></p>
-                <p>This OTP is valid for 5 minutes.</p>
+                <p>This OTP is valid for 1 minutes.</p>
             ";
 
             $sent = MailHelper::send(
@@ -154,32 +163,28 @@ class SiteController extends Controller
         return $this->redirect(['site/verify-otp', 'id' => $user->id]);
     }
 
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
+public function actionLogin()
+{
+    if (!Yii::$app->user->isGuest) {
+        return $this->redirect(['site/index']);
+    }
+
+    $model = new User();
+    $model->scenario = 'admin';
+
+    if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+        $result = $model->userLogin();
+
+        if ($result['success']) {
             return $this->redirect(['site/index']);
         }
 
-        $model = new User();
-        $model->scenario = 'admin';
-
-
-        if ($model->load(Yii::$app->request->post())) {
-            $inputUsername = $model->username;
-            $inputPassword = $model->password;
-           
-
-            $user = User::findOne(['username' => $inputUsername]);
-
-            if ($user && $user->validatePassword($inputPassword)) {
-                Yii::$app->user->login($user);
-                Yii::$app->session->set('id', $user->id);
-                return $this->redirect(['site/index']);
-            }
-        }
-
-        return $this->render('login', ['model' => $model]);
+        Yii::$app->session->setFlash('error', $result['message']);
     }
+
+    return $this->render('login', ['model' => $model]);
+}
+
 
     public function actionLogout()
     {

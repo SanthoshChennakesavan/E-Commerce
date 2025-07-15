@@ -20,10 +20,9 @@ $this->title = 'User Sign Up';
             <?php endforeach; ?>
 
             <?php $form = ActiveForm::begin([
-                'errorCssClass' => 'is-invalid',
                 'fieldConfig' => [
-                    'errorOptions' => ['class' => 'text-danger'],
-                    'template' => "{label}\n{input}\n<div>{error}</div>",
+                    'errorOptions' => ['class' => 'text-danger small mt-1 mb-2'],
+                    'template' => "{label}\n{input}\n{error}",
                 ],
             ]); ?>
 
@@ -34,12 +33,19 @@ $this->title = 'User Sign Up';
 
             <div class="row">
                 <div class="col-md-6"><?= $form->field($model, 'email')->label('Email <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
-                <div class="col-md-6"><?= $form->field($model, 'phone')->textInput(['type' => 'number', 'min' => '0'])->label('Phone <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
+                  <div class="col-md-6">
+                    <?= $form->field($model, 'phone')->textInput([
+                        'type' => 'tel',
+                        'maxlength' => 10,
+                        'pattern' => '\d{10}',
+                        'oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);"
+                    ])->label('Phone <span class="text-danger">*</span>', ['class' => 'form-label']) ?>
+                </div>
             </div>
 
             <div class="row">
                 <div class="col-md-6"><?= $form->field($model, 'dob')->widget(DatePicker::classname(), [
-                     'bsVersion' => '5.x',
+                    'bsVersion' => '5.x',
                     'options' => ['placeholder' => 'Select your birth date...'],
                     'pluginOptions' => [
                         'autoclose' => true,
@@ -49,7 +55,7 @@ $this->title = 'User Sign Up';
 
                 <div class="col-md-6">
                     <?= $form->field($model, 'gender')->widget(Select2::classname(), [
-                         'bsVersion' => '5.x',
+                        'bsVersion' => '5.x',
                         'data' => ['Male' => 'Male', 'Female' => 'Female'],
                         'options' => ['placeholder' => 'Select Gender'],
                         'pluginOptions' => ['allowClear' => true],
@@ -62,23 +68,25 @@ $this->title = 'User Sign Up';
             </div>
 
             <div class="row">
-                <div class="col-md-4">
-                    <?= $form->field($model, 'district')->label('District <span class="text-danger">*</span>', ['class' => 'form-label']) ?>
+                <div class="col-md-4"><?= $form->field($model, 'district')->label('District <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
+                <div class="col-md-4"><?= $form->field($model, 'state')->widget(Select2::classname(), [
+                    'data' => [
+                        'Tamil Nadu' => 'Tamil Nadu',
+                        'Kerala' => 'Kerala',
+                        'Karnataka' => 'Karnataka',
+                        'Andhra Pradesh' => 'Andhra Pradesh'
+                    ],
+                    'bsVersion' => '5.x',
+                    'options' => ['placeholder' => 'Select State'],
+                    'pluginOptions' => ['allowClear' => true],
+                ])->label('State <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
+                
+                    <div class="col-md-4">
+                    <?= $form->field($model, 'pincode')->textInput([
+                        'maxlength' => 6,
+                        'oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);"
+                    ]) ->label('Pincode <span class="text-danger">*</span>', ['class' => 'form-label'])?>
                 </div>
-                <div class="col-md-4">
-                    <?= $form->field($model, 'state')->widget(Select2::classname(), [
-                        'data' => [
-                            'Tamil Nadu' => 'Tamil Nadu',
-                            'Kerala' => 'Kerala',
-                            'Karnataka' => 'Karnataka',
-                            'Andhra Pradesh' => 'Andhra Pradesh'
-                        ],
-                         'bsVersion' => '5.x',
-                        'options' => ['placeholder' => 'Select State'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('State <span class="text-danger">*</span>', ['class' => 'form-label']) ?>
-                </div>
-                <div class="col-md-4"><?= $form->field($model, 'pincode')->label('Pincode <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
             </div>
 
             <div class="row">

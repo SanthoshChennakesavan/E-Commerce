@@ -3,6 +3,9 @@
 namespace app\modules\admin\models;
 
 use Yii;
+use yii\data\ActiveDataProvider;
+use app\modules\admin\models\Products;
+use yii\db\ActiveRecord;
 
 /**
  * This is the model class for table "category".
@@ -11,22 +14,17 @@ use Yii;
  * @property string $categoryname
  * @property string $categorydes
  * @property int $status
+ * @property string $category_seourl
  *
  * @property Products[] $products
  */
-class Category extends \yii\db\ActiveRecord
+class Category extends ActiveRecord
 {
-    /**
-     * {@inheritdoc}
-     */
     public static function tableName()
     {
         return 'category';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules()
     {
         return [
@@ -34,13 +32,10 @@ class Category extends \yii\db\ActiveRecord
             [['status'], 'integer'],
             [['categoryname'], 'string', 'max' => 100],
             [['categorydes'], 'string', 'max' => 300],
-            [['category_seourl'], 'string']
+            [['category_seourl'], 'string'],
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels()
     {
         return [
@@ -48,18 +43,76 @@ class Category extends \yii\db\ActiveRecord
             'categoryname' => 'Category Name',
             'categorydes' => 'Category Description',
             'status' => 'Status',
-            'category_seourl' => 'Category SeoURL'
+            'category_seourl' => 'Category SeoURL',
         ];
     }
 
-    /**
-     * Gets query for [[Products]].
-     *
-     * @return \yii\db\ActiveQuery
-     */
     public function getProducts()
     {
         return $this->hasMany(Products::class, ['categoryid' => 'id']);
     }
 
+    public static function getFilteredCategoryList($categoryname = null)
+    {
+        $query = self::find()->where(['status' => 1]);
+
+        if (!empty($categoryname)) {
+            $query->andFilterWhere(['like', 'categoryname', $categoryname]);
+        }
+
+        return new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => ['pageSize' => 10],
+        ]);
+    }
+
+    public function softDeleteWithCheck()
+    {
+        $productCount = Products::find()
+            ->where(['categoryid' => $this->id, 'status' => 1])
+            ->count();
+
+        if ($productCount > 0) {
+            Yii::$app->session->setFlash('error', 'Cannot delete category. It is assigned to products.');
+            return false;
+        }
+
+        $this->status = 0;
+        $this->categoryname .= ' [Deleted]';
+
+        if ($this->save(false)) {
+            Yii::$app->session->setFlash('success', 'Category deleted successfully.');
+            return true;
+        }
+
+        Yii::$app->session->setFlash('error', 'Failed to delete category.');
+        return false;
+    }
+    
+    public function getCategoryCount()
+    {
+        return self::find()->where(['status' => 1])->count();
+    }
+
+    public function getAllCategories()
+    {
+        return self::find()->where(['status' => 1])->all();
+    }
+
+    public function getPieChartData()
+    {
+        $categories = $this->getAllCategories();
+        $labels = [];
+        $data = [];
+
+        foreach ($categories as $category) {
+            $labels[] = $category->categoryname;
+            $data[] = Products::find()->where(['categoryid' => $category->id, 'status' => 1])->count();
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+        ];
+    }
 }

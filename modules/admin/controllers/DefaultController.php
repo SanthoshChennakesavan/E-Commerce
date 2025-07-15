@@ -5,75 +5,65 @@ namespace app\modules\admin\controllers;
 use Yii;
 use yii\web\Controller;
 use app\models\User;
+use app\modules\admin\models\Category;
+use app\modules\admin\models\Products;
       
 class DefaultController extends Controller
 {
-    public $layout = '@app/modules/admin/views/layouts/admin';
-
-public function actionIndex()
-{
-    $model = new User();
-
-    if ($model->load(Yii::$app->request->post())) {
-        $user = User::findOne(['username' => $model->username]);
-
-        if (!$user || $user->user_type == 0 || $user->password !== $model->password) {
-            Yii::$app->session->setFlash('error', 'Invalid username or password.');
-            return $this->redirect(['index']);
+    public function actionIndex()
+    {
+        if (!Yii::$app->user->isGuest) {
+            return $this->redirect(['default/dashboard']);
         }
+        $this->layout = 'admin';
+        $model = new User();
+        
+        if ($model->load(Yii::$app->request->post())) {
+            $result = $model->adminLogin();
 
-        // Successful login
-        Yii::$app->session->set('superadmin', $user->id);
-        Yii::$app->session->setFlash('success', 'Login successful!');
-        return $this->redirect(['dashboard']);
+            if($result['success']){
+                Yii::$app->session->setFlash('success', $result['message']);
+                return $this->redirect(['dashboard']);
+            }
+            else{
+                Yii::$app->session->setFlash('error', $result['message']);
+                return $this->redirect(['index']);
+            }
+        }
+        return $this->render('index', [
+            'model' => $model,
+        ]);
     }
-
-    return $this->render('index', [
-        'model' => $model,
-    ]);
-}
-
-
 
     public function actionDashboard()
     {
-        if (!Yii::$app->session->has('superadmin')) {
+        if (Yii::$app->user->isGuest) {
             return $this->redirect(['default/index']);
         }
 
         $this->layout = 'dashboard';
 
-        $categoryCount = \app\modules\admin\models\Category::find()->count();
-        $productCount = \app\modules\admin\models\Products::find()->count();
+        $categoryModel = new Category();
+        $productModel = new Products();
 
-        $categories = \app\modules\admin\models\Category::find()->all();
+        $categoryCount = $categoryModel->getCategoryCount();
+        $productCount = $productModel->getProductCount();
 
-        $pieLabels = [];
-        $pieData = [];
-
-        foreach ($categories as $category) {
-            $pieLabels[] = $category->categoryname;
-            $pieData[] = \app\modules\admin\models\Products::find()
-                ->where(['categoryid' => $category->id])
-                ->count();
-        }
-
-        $barLabels = $pieLabels;
-        $barData = $pieData;
+        $chartData = $categoryModel->getPieChartData();
 
         return $this->render('dashboard', [
             'categoryCount' => $categoryCount,
             'productCount' => $productCount,
-            'pieLabels' => $pieLabels,
-            'pieData' => $pieData,
-            'barLabels' => $barLabels,
-            'barData' => $barData,
+            'pieLabels' => $chartData['labels'],
+            'pieData' => $chartData['data'],
+            'barLabels' => $chartData['labels'],
+            'barData' => $chartData['data'],
         ]);
     }
   
     public function actionLogout()
     {
-        Yii::$app->session->destroy();
+        Yii::$app->user->logout();
         return $this->redirect(['index']);
     }
 

@@ -1,10 +1,13 @@
-<?php namespace app\modules\admin\models;
+<?php
+
+namespace app\modules\admin\models;
 
 use Yii;
 use yii\web\UploadedFile;
 use yii\data\ActiveDataProvider;
+use yii\db\ActiveRecord;
 
-class Products extends \yii\db\ActiveRecord
+class Products extends ActiveRecord
 {
     /**
      * @var UploadedFile
@@ -19,12 +22,11 @@ class Products extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['categoryid', 'productname', 'productdes', 'productprice', 'stock', 'status'], 'required'],
+            [['categoryid', 'productname', 'productdes', 'productprice', 'stock', 'status', 'min_quantity', 'max_quantity'], 'required'],
             [['productprice', 'stock'], 'number'],
-            [['categoryid', 'status'], 'integer'],
-            [['min_quantity', 'max_quantity'], 'integer'],
+            [['categoryid', 'status', 'min_quantity', 'max_quantity'], 'integer'],
             [['productname'], 'string', 'max' => 100],
-            [['productname'], 'validateUniqueProductName'], // ✅ custom validator
+            [['productname'], 'validateUniqueProductName'],
             [['productdes'], 'string', 'max' => 300],
             [['productimage'], 'string', 'max' => 255],
             [['imageFile'], 'file', 'extensions' => 'png, jpg, jpeg, gif', 'skipOnEmpty' => true],
@@ -36,7 +38,7 @@ class Products extends \yii\db\ActiveRecord
         $query = self::find()->where(['productname' => $this->$attribute]);
 
         if (!$this->isNewRecord) {
-            $query->andWhere(['<>', 'id', $this->id]); 
+            $query->andWhere(['<>', 'id', $this->id]);
         }
 
         if ($query->exists()) {
@@ -61,39 +63,79 @@ class Products extends \yii\db\ActiveRecord
         ];
     }
 
-   public function upload()
-    {
-        if ($this->validate()) {
-            $fileName = uniqid() . '.' . $this->imageFile->extension;
-            $filePath = Yii::getAlias('@webroot/uploads/') . $fileName;
-
-            if ($this->imageFile->saveAs($filePath)) {
-                $this->productimage = $fileName;
-                return true;
-            }
-        }
-        return false;
-    }
-
     public function getCategory()
     {
         return $this->hasOne(Category::class, ['id' => 'categoryid']);
     }
 
-    public function productSearch($selectedCategories = null){
+    public function productSearch($selectedCategories = null)
+    {
         $query = self::find()->where(['status' => 1]);
 
         if (!empty($selectedCategories)) {
             $query->andWhere(['categoryid' => $selectedCategories]);
         }
 
-        $dataProvider = new ActiveDataProvider([
+        return new ActiveDataProvider([
             'query' => $query->with('category'),
             'pagination' => ['pageSize' => 8],
         ]);
-
-        return $dataProvider;
     }
 
+    public static function getFilteredProductList($productname = null)
+    {
+        $query = self::find()->where(['status' => 1]);
+
+        if (!empty($productname)) {
+            $query->andFilterWhere(['like', 'productname', $productname]);
+        }
+
+        return new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => ['pageSize' => 10],
+        ]);
+    }
+
+    public function handleUploadAndSave()
+    {
+        if ($this->validate()) {
+            if ($this->imageFile) {
+                $fileName = uniqid() . '.' . $this->imageFile->extension;
+                $filePath = Yii::getAlias('@webroot/uploads/') . $fileName;
+
+                if ($this->imageFile->saveAs($filePath)) {
+                    $this->productimage = $fileName;
+                } else {
+                    return false;
+                }
+            }
+            return $this->save(false);
+        }
+
+        return false;
+    }
+
+    // Soft delete the product
+    public function softDelete()
+    {
+        $imagePath = Yii::getAlias('@webroot/uploads/') . $this->productimage;
+        if (file_exists($imagePath)) {
+            @unlink($imagePath);
+        }
+
+        $this->status = 0;
+        $this->productname .= ' [Deleted]';
+
+        return $this->save(false);
+    }
+
+    public function getProductCount()
+    {
+        return self::find()->where(['status' => 1])->count();
+    }
+
+    public function getProductCountByCategory($categoryId)
+    {
+        return self::find()->where(['categoryid' => $categoryId, 'status' => 1])->count();
+    }
 }
-?>

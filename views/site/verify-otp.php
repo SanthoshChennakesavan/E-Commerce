@@ -9,9 +9,10 @@ $this->title = 'Verify OTP';
     <div class="text-center w-100" style="max-width: 420px;">
         <h3 class="mb-4"><?= Html::encode($this->title) ?></h3>
 
-        <?php foreach (Yii::$app->session->getAllFlashes() as $type => $message): ?>
-            <div class="alert alert-<?= $type === 'error' ? 'danger' : $type ?>">
+       <?php foreach (Yii::$app->session->getAllFlashes() as $type => $message): ?>
+            <div class="alert alert-<?= $type === 'error' ? 'danger' : $type ?> alert-dismissible fade show" role="alert">
                 <?= $message ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endforeach; ?>
 

@@ -6,28 +6,25 @@ use Yii;
 use yii\web\Controller;
 use app\modules\admin\models\Category;
 use yii\web\Response;
+use yii\web\BadRequestHttpException;
 
 class CategoryController extends Controller
 {
-    public function actionCategory()
+    public function beforeAction($action)
     {
-        if (!Yii::$app->session->has('superadmin')) {
+        if (Yii::$app->user->isGuest)
+        {
             return $this->redirect(['default/index']);
         }
+        return parent::beforeAction($action);
+    }
 
+    public function actionCategory()
+    {
         $this->layout = 'dashboard';
 
-        $query = Category::find();
-
-        $categoryname = Yii::$app->request->get('categoryname');
-        if (!empty($categoryname)) {
-            $query->andFilterWhere(['like', 'categoryname', $categoryname]);
-        }
-
-        $dataProvider = new \yii\data\ActiveDataProvider([
-            'query' => $query,
-            'pagination' => ['pageSize' => 10],
-        ]);
+        $categoryname = Yii::$app->request->post('categoryname');
+        $dataProvider = Category::getFilteredCategoryList($categoryname);
 
         return $this->render('category', [
             'dataProvider' => $dataProvider,
@@ -36,10 +33,6 @@ class CategoryController extends Controller
 
     public function actionCreate()
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
         $model = new Category();
 
@@ -47,16 +40,11 @@ class CategoryController extends Controller
             Yii::$app->session->setFlash('success', 'Category created successfully.');
             return $this->redirect(['category']); 
         }
-
         return $this->render('create', ['model' => $model]);
     }
 
     public function actionView($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
         $model = Category::findOne($id);
         return $this->render('viewcategory', ['model' => $model]);
@@ -64,10 +52,6 @@ class CategoryController extends Controller
 
     public function actionUpdate($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
         $model = Category::findOne($id);
 
@@ -75,29 +59,34 @@ class CategoryController extends Controller
             Yii::$app->session->setFlash('success', 'Category updated successfully.');
             return $this->redirect(['category']); 
         }
-
         return $this->render('create', ['model' => $model]);
     }
 
     public function actionDelete($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
+        Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $model = Category::findOne($id);
-
-        if ($model) {
-            $productCount = \app\modules\admin\models\Products::find()->where(['categoryid' => $id])->count();
-
-            if ($productCount > 0) {
-                Yii::$app->session->setFlash('error', 'Cannot delete category. It is assigned to one or more products.');
-            } else {
-                $model->delete();
-                Yii::$app->session->setFlash('success', 'Category deleted.');
+        try
+        {
+            if (!Yii::$app->request->isPost) {
+                throw new BadRequestHttpException('Invalid request method.');
             }
-        }
 
-        return $this->redirect(['category']);
+            $model = Category::findOne($id);
+            if (!$model) {
+                Yii::$app->session->setFlash('error', 'Category not found.');
+                return ['success' => true];
+            }
+
+            $model->softDeleteWithCheck();
+            return ['success' => true];
+
+        } 
+        catch (\Throwable $e) 
+        {
+            Yii::error("Delete category error: " . $e->getMessage(), __METHOD__);
+            Yii::$app->session->setFlash('error', 'An error occurred while deleting the category.');
+            return ['success' => true];
+        }
     }
 }

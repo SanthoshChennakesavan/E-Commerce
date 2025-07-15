@@ -2,7 +2,7 @@
 
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
-
+$params['bsVersion'] = '5.x';
 $config = [
     'id' => 'basic',
     'basePath' => dirname(__DIR__),
@@ -26,7 +26,7 @@ $config = [
             'kartik\select2\Select2Asset' => [
                 'depends' => [
                     'yii\web\JqueryAsset',
-                    'yii\bootstrap5\BootstrapAsset', // ✅ Use Bootstrap 5
+                    'yii\bootstrap5\BootstrapAsset', 
                 ],
             ],
             'kartik\select2\ThemeDefaultAsset' => [
@@ -54,12 +54,12 @@ $config = [
             // send all mails to a file by default.
             'useFileTransport' => true,
         ],
-        'log' => [
+       'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0,
             'targets' => [
                 [
                     'class' => 'yii\log\FileTarget',
-                    'levels' => ['error', 'warning'],
+                    'levels' => ['error', 'warning', 'info'],
                 ],
             ],
         ],
@@ -73,9 +73,8 @@ $config = [
         ],
         
     ],
-    'params' => [
-    'bsVersion' => '5.x', // ✅ Tells all Kartik widgets to use Bootstrap 5
-],
+    
+     'params' => $params,
 
     'container' => [
     'definitions' => [

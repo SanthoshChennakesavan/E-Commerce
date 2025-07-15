@@ -15,77 +15,84 @@ $this->title = 'User Sign Up';
             <?php foreach (Yii::$app->session->getAllFlashes() as $type => $message): ?>
                 <div class="alert alert-<?= $type === 'error' ? 'danger' : $type ?> alert-dismissible fade show" role="alert">
                     <?= $message ?>
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">&times;</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             <?php endforeach; ?>
 
             <?php $form = ActiveForm::begin([
-                'errorCssClass' => 'is-invalid',
+                'enableClientValidation' => true,
+                'enableAjaxValidation' => false,
+                'options' => ['novalidate' => 'novalidate'],
                 'fieldConfig' => [
-                    'errorOptions' => ['class' => 'text-danger'],
-                    'template' => "{label}\n{input}\n<div>{error}</div>",
+                    'template' => "{label}\n{input}\n<div class='text-danger'>{error}</div>",
+                    'labelOptions' => ['class' => 'form-label'],
                 ],
             ]); ?>
 
             <div class="row">
-                <div class="col-md-6"><?= $form->field($model, 'username')->label('Username <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
-                <div class="col-md-6"><?= $form->field($model, 'fullname')->label('Fullname <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
+                <div class="col-md-6"><?= $form->field($model, 'username')->textInput() ?></div>
+                <div class="col-md-6"><?= $form->field($model, 'fullname')->textInput() ?></div>
             </div>
 
             <div class="row">
-                <div class="col-md-6"><?= $form->field($model, 'email')->label('Email <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
-                <div class="col-md-6"><?= $form->field($model, 'phone')->textInput(['type' => 'number', 'min' => '0'])->label('Phone <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6"><?= $form->field($model, 'dob')->widget(DatePicker::classname(), [
-                     'bsVersion' => '5.x',
-                    'options' => ['placeholder' => 'Select your birth date...'],
-                    'pluginOptions' => [
-                        'autoclose' => true,
-                        'format' => 'yyyy-mm-dd'
-                    ],
-                ])->label('DOB <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
-
+                <div class="col-md-6"><?= $form->field($model, 'email')->textInput(['type' => 'email']) ?></div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'gender')->widget(Select2::classname(), [
-                         'bsVersion' => '5.x',
-                        'data' => ['Male' => 'Male', 'Female' => 'Female'],
-                        'options' => ['placeholder' => 'Select Gender'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('Gender <span class="text-danger">*</span>', ['class' => 'form-label']) ?>
+                    <?= $form->field($model, 'phone')->textInput([
+                        'type' => 'tel',
+                        'maxlength' => 10,
+                        'pattern' => '\d{10}',
+                        'oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);"
+                    ]) ?>
                 </div>
             </div>
 
             <div class="row">
-                <div class="col-md-12"><?= $form->field($model, 'address')->textarea(['rows' => 2])->label('Address <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
+                <div class="col-md-6"><?= $form->field($model, 'dob')->widget(DatePicker::class, [
+                    'bsVersion' => '5.x',
+                    'options' => ['placeholder' => 'Select your birth date...'],
+                    'pluginOptions' => ['autoclose' => true, 'format' => 'yyyy-mm-dd']
+                ]) ?></div>
+
+                <div class="col-md-6"><?= $form->field($model, 'gender')->widget(Select2::class, [
+                    'bsVersion' => '5.x',
+                    'data' => ['Male' => 'Male', 'Female' => 'Female'],
+                    'options' => ['placeholder' => 'Select Gender'],
+                    'pluginOptions' => ['allowClear' => true],
+                ]) ?></div>
             </div>
 
             <div class="row">
+                <div class="col-md-12"><?= $form->field($model, 'address')->textarea(['rows' => 2]) ?></div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4"><?= $form->field($model, 'district')->textInput() ?></div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'district')->label('District <span class="text-danger">*</span>', ['class' => 'form-label']) ?>
-                </div>
-                <div class="col-md-4">
-                    <?= $form->field($model, 'state')->widget(Select2::classname(), [
+                    <?= $form->field($model, 'state')->widget(Select2::class, [
+                        'bsVersion' => '5.x',
                         'data' => [
                             'Tamil Nadu' => 'Tamil Nadu',
                             'Kerala' => 'Kerala',
                             'Karnataka' => 'Karnataka',
                             'Andhra Pradesh' => 'Andhra Pradesh'
                         ],
-                         'bsVersion' => '5.x',
                         'options' => ['placeholder' => 'Select State'],
                         'pluginOptions' => ['allowClear' => true],
-                    ])->label('State <span class="text-danger">*</span>', ['class' => 'form-label']) ?>
+                    ]) ?>
                 </div>
-                <div class="col-md-4"><?= $form->field($model, 'pincode')->label('Pincode <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
+                <div class="col-md-4">
+                    <?= $form->field($model, 'pincode')->textInput([
+                        'maxlength' => 6,
+                        'oninput' => "this.value = this.value.replace(/[^0-9]/g, '').slice(0, 6);"
+                    ]) ?>
+                </div>
             </div>
 
             <div class="row">
-                <div class="col-md-6"><?= $form->field($model, 'password')->passwordInput()->label('Password <span class="text-danger">*</span>', ['class' => 'form-label']) ?></div>
+                <div class="col-md-6"><?= $form->field($model, 'password')->passwordInput() ?></div>
             </div>
 
-             <div class="form-group mt-3">
+            <div class="form-group mt-3">
                 <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
                 <?= Html::a('Cancel', ['user-index'], ['class' => 'btn btn-secondary']) ?>
             </div>

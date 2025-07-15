@@ -5,29 +5,6 @@ use yii\widgets\ActiveForm;
 $this->title = 'Admin Login';
 ?>
 
-<style>
-    html, body {
-        height: 100%;
-        margin: 0;
-        background-color: #f8f9fa;
-    }
-    
-    input::placeholder {
-        font-size: 14px;
-    }
-
-    .form-label {
-        font-weight: 600;
-        margin-bottom: 6px;
-    }
-
-    .help-block {
-        color: red;
-        font-size: 0.875rem;
-        margin-top: 5px;
-    }
-</style>
-
 <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
     <div class="col-md-4">
         <div class="card border border-secondary shadow rounded-4">

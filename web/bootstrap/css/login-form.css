@@ -1,0 +1,20 @@
+    html, body {
+        height: 100%;
+        margin: 0;
+        background-color: #f8f9fa;
+    }
+    
+    input::placeholder {
+        font-size: 14px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .help-block {
+        color: red;
+        font-size: 0.875rem;
+        margin-top: 5px;
+    }

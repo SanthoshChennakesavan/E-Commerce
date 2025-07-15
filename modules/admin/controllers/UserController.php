@@ -4,30 +4,25 @@ namespace app\modules\admin\controllers;
 
 use Yii;
 use yii\web\Controller;
-use app\modules\admin\models\Superadmin;
+use yii\web\Response;
+use yii\web\BadRequestHttpException;
 use app\models\User;
+use app\components\MailHelper;
 
 class UserController extends Controller
 {
-    public function actionUserIndex()
+    public function beforeAction($action)
     {
-        if (!Yii::$app->session->has('superadmin')) {
+        if (Yii::$app->user->isGuest) {
             return $this->redirect(['default/index']);
         }
+        return parent::beforeAction($action);
+    }
 
+    public function actionUserIndex()
+    {
         $this->layout = 'dashboard';
-
-        $query = User::find()->where(['user_type'=>0]);
-
-        // $username = Yii::$app->request->get('username');
-        // if (!empty($username)) {
-        //     $query->andFilterWhere(['like', 'username', $username]);
-        // }
-
-        $dataProvider = new \yii\data\ActiveDataProvider([
-            'query' => $query,
-            'pagination' => ['pageSize' => 10],
-        ]);
+        $dataProvider = User::getUserDataProvider(1);
 
         return $this->render('user-index', [
             'dataProvider' => $dataProvider,
@@ -36,10 +31,6 @@ class UserController extends Controller
 
     public function actionView($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
         $model = User::findOne($id);
         return $this->render('view', ['model' => $model]);
@@ -47,16 +38,23 @@ class UserController extends Controller
 
     public function actionCreateUser()
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
-        $model = new User();
+        $model = new User(['scenario' => 'user']);
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            Yii::$app->session->setFlash('success', 'User created successfully.');
-            return $this->redirect(['user-index']); 
+        if ($model->load(Yii::$app->request->post())) {
+            $model->user_type = 1;
+            if ($model->save()) {
+
+                $body = "Dear {$model->fullname},<br><br>Your account has been created successfully.
+                                                <br>Username: <strong>{$model->username}</strong>
+                                                <br>Password: <strong>{$model->password}</strong><br>
+                                                <br>Thank you for registering.";
+
+                MailHelper::send($model->email, 'Your account has been created!', $body);
+
+                Yii::$app->session->setFlash('success', 'User created successfully.');
+                return $this->redirect(['user-index']);
+            }
         }
 
         return $this->render('create-user', ['model' => $model]);
@@ -64,16 +62,12 @@ class UserController extends Controller
 
     public function actionUpdate($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
-
         $this->layout = 'dashboard';
         $model = User::findOne($id);
 
         if ($model->load(Yii::$app->request->post()) && $model->save()) {
             Yii::$app->session->setFlash('success', 'User updated successfully.');
-            return $this->redirect(['user-index']); 
+            return $this->redirect(['user-index']);
         }
 
         return $this->render('create-user', ['model' => $model]);
@@ -81,19 +75,15 @@ class UserController extends Controller
 
     public function actionDelete($id)
     {
-        if (!Yii::$app->session->has('superadmin')) {
-            return $this->redirect(['default/index']);
-        }
+        Yii::$app->response->format = Response::FORMAT_JSON;
 
         $model = User::findOne($id);
 
-        if ($model !== null) {
-            $model->delete();
-            Yii::$app->session->setFlash('success', 'User deleted successfully.');
-        } else {
-            Yii::$app->session->setFlash('error', 'User not found.');
+        if ($model !== null && $model->softDelete()) {
+            return ['success' => true, 'message' => 'User deleted successfully.'];
         }
 
-        return $this->redirect(['user-index']);
+        return ['success' => false, 'message' => 'User not found or could not be deleted.'];
     }
+
 }
